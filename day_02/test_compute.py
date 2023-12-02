@@ -6,6 +6,7 @@ from day_02.compute import (
     Game,
     Record,
     q1,
+    q2,
 )
 
 
@@ -32,7 +33,6 @@ class TestRecord:
             ('3 blue, 4 red, 2 green', [Record(blue=3, red=4, green=2)]),
             ('1 blue, 2 green', [Record(blue=1, green=2)]),
             ('15 blue', [Record(blue=15)]),
-            # ('', []),
             (
                 '3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green',
                 [
@@ -59,10 +59,6 @@ class TestGame:
                 'Game 10: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green',
                 Game(10, [Record(red=6, blue=1, green=3), Record(blue=2, red=1, green=2)]),
             ),
-            # (
-            #     'Game 2: ',
-            #     Game(2, []),
-            # ),
         ),
     )
     def test_from_line(self, line, expected):
@@ -77,3 +73,13 @@ class TestQ1:
     def test_input(self, input_txt):
         data = Game.from_file(input_txt)
         assert q1(data) == 2600
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        data = Game.from_file(small_ex_txt)
+        assert q2(data) == 2286
+
+    def test_input(self, input_txt):
+        data = Game.from_file(input_txt)
+        assert q2(data) == 86036

@@ -17,6 +17,10 @@ class Record:
     red: int = 0
     green: int = 0
 
+    @property
+    def power(self) -> int:
+        return self.blue * self.red * self.green
+
     @classmethod
     def from_line(cls, line: str) -> List[Self]:
         records = []
@@ -65,15 +69,40 @@ class Game:
             if is_valid:
                 yield current_game
 
+    def minimum_setup(self) -> Record:
+        return Record(
+            blue=max((record.blue for record in self.records)),
+            green=max((record.green for record in self.records)),
+            red=max((record.red for record in self.records)),
+        )
+
 
 def q1(data: List[Game]) -> int:
-    return sum((game.id for game in Game.check_configuration(data, Record(red=12, green=13, blue=14))))
+    config = Record(red=12, green=13, blue=14)
+    sum_valid_ids = 0
+    for game in data:
+        is_valid = True
+        for record in game.records:
+            is_valid &= record.is_possible(config)
+        if is_valid:
+            sum_valid_ids += game.id
+
+    return sum_valid_ids
+
+
+def q2(data: List[Game]) -> int:
+    sum_of_powers = 0
+    for game in data:
+        minimum_set = game.minimum_setup()
+        sum_of_powers += minimum_set.power
+    return sum_of_powers
 
 
 def main(filename: str):
     data = Game.from_file(filename)
 
     print(f'Q1: sum of possible id: {q1(data)}')
+    print(f'Q2: sum of powers: {q2(data)}')
 
 
 if __name__ == '__main__':
