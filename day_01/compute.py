@@ -72,12 +72,16 @@ def q2(lines: List[Line]) -> int:
     return sum((line.calibration_q2 for line in lines))
 
 
+def main(filename: str):
+    data = load_data(filename)
+
+    print(f'Q1 calibration: {q1(data)}')
+    print(f'Q2 calibration: {q2(data)}')
+
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--input', type=str, default='input.txt', help='Input file')
     args = parser.parse_args()
 
-    dat = load_data(args.input)
-
-    print(f'Q1 calibration: {q1(dat)}')
-    print(f'Q2 calibration: {q2(dat)}')
+    main(args.input)
