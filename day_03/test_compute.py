@@ -3,9 +3,11 @@ import os
 import pytest
 
 from day_03.compute import (
+    Gear,
     Position,
     Schematic,
     q1,
+    q2,
 )
 
 
@@ -37,6 +39,18 @@ class TestPosition:
             Position(1, 1),
             Position(2, 1),
         ]
+
+
+class TestGear:
+    @pytest.mark.parametrize(
+        'first, second',
+        (
+            (467, 35),
+            (598, 755),
+        ),
+    )
+    def test_gear_ratio(self, first, second):
+        assert Gear(Position(0, 0), first, second).gear_ratio == first * second
 
 
 class TestSchematic:
@@ -109,6 +123,13 @@ class TestSchematic:
             598,
         }
 
+    def test_find_fears(self, small_ex_txt):
+        schematic = Schematic.from_file(small_ex_txt)
+        assert schematic.find_gears() == [
+            Gear(Position(3, 1), 35, 467),
+            Gear(Position(5, 8), 598, 755),
+        ]
+
 
 class TestQ1:
     def test_small_ex(self, small_ex_txt):
@@ -116,3 +137,11 @@ class TestQ1:
 
     def test_input(self, input_txt):
         assert q1(Schematic.from_file(input_txt)) == 546563
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert q2(Schematic.from_file(small_ex_txt)) == 467835
+
+    def test_input(self, input_txt):
+        assert q2(Schematic.from_file(input_txt)) == 91031374

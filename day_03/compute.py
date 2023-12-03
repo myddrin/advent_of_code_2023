@@ -26,6 +26,21 @@ class Position:
 
 
 @dataclasses.dataclass
+class Gear:
+    """A gear is any '*' adjacent to exactly two parts"""
+
+    symbol: ClassVar[str] = '*'
+
+    position: Position
+    first_part: int
+    second_part: int
+
+    @property
+    def gear_ratio(self) -> int:
+        return self.first_part * self.second_part
+
+
+@dataclasses.dataclass
 class Schematic:
     # digits and '.' are not symbols
     symbols_re: ClassVar = re.compile(r'[^\d.]')
@@ -57,15 +72,7 @@ class Schematic:
     def extract_number_at(self, p: Position) -> int:
         source_str = self.data[p.y]
         not_digit_re = re.compile(r'[^\d]')
-        # if start_match := list(not_digit_re.findall(source_str, 0, p.x)):
-        #     start = start_match[0].start() + 1
-        # else:
-        #     start = 0
-        # if end_match := list(not_digit_re.findall(source_str, p.x)):
-        #     end = end_match[0].start() - 1
-        #     slice = source_str[start: end]
-        # else:
-        #     slice = source_str[start:]
+
         start = p.x
         end = p.x
         while start >= 0:
@@ -76,6 +83,7 @@ class Schematic:
             if not_digit_re.match(source_str[end]):
                 break
             end += 1
+
         slice = source_str[start + 1 : end]
         return int(slice)
 
@@ -98,15 +106,41 @@ class Schematic:
         # position could appear twice
         return all_numbers
 
+    def find_gears(self) -> List[Gear]:
+        all_gears: List[Gear] = []
 
-def q1(schem: Schematic) -> int:
-    return sum(schem.find_numbers_adjacent_to_symbols())
+        for symbol_loc in self.symbols:
+            the_symbol = self.data[symbol_loc.y][symbol_loc.x]
+            if the_symbol != Gear.symbol:
+                continue
+
+            adjacent_numbers = set()
+            for neighbour in symbol_loc.neighbours:
+                if self.is_digit(neighbour):
+                    adjacent_numbers.add(self.extract_number_at(neighbour))
+            if len(adjacent_numbers) != 2:
+                continue  # a gear has exactly 2 neighbours
+
+            # sorting to help unit tests - simple iteration is enough, but it's only 2 elements
+            parts = sorted(adjacent_numbers)
+            all_gears.append(Gear(symbol_loc, parts[0], parts[1]))
+
+        return all_gears
+
+
+def q1(schematic: Schematic) -> int:
+    return sum(schematic.find_numbers_adjacent_to_symbols())
+
+
+def q2(schematic: Schematic) -> int:
+    return sum((gear.gear_ratio for gear in schematic.find_gears()))
 
 
 def main(filename: str):
     data = Schematic.from_file(filename)
 
     print(f'Q1: sum of parts: {q1(data)}')
+    print(f'Q2: sum of gear ratio: {q2(data)}')
 
 
 if __name__ == '__main__':
