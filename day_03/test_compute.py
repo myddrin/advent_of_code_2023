@@ -1,0 +1,118 @@
+import os
+
+import pytest
+
+from day_03.compute import (
+    Position,
+    Schematic,
+    q1,
+)
+
+
+@pytest.fixture(scope='session')
+def small_ex_txt():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'small_ex.txt',
+    )
+
+
+@pytest.fixture(scope='session')
+def input_txt():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'input.txt',
+    )
+
+
+class TestPosition:
+    def test_neighbours(self):
+        assert list(Position(1, 0).neighbours) == [
+            Position(0, -1),
+            Position(1, -1),
+            Position(2, -1),
+            Position(0, 0),
+            Position(2, 0),
+            Position(0, 1),
+            Position(1, 1),
+            Position(2, 1),
+        ]
+
+
+class TestSchematic:
+    def test_from_file(self, small_ex_txt):
+        schematic = Schematic.from_file(small_ex_txt)
+        assert set(schematic.symbols) == {
+            Position(3, 1),  # '*'
+            Position(6, 3),  # '#'
+            Position(3, 4),  # '*'
+            Position(5, 5),  # '+'
+            Position(3, 8),  # '$'
+            Position(5, 8),  # '*'
+        }
+        assert schematic.data == [
+            '467..114..',
+            '...*......',
+            '..35..633.',
+            '......#...',
+            '617*......',
+            '.....+.58.',
+            '..592.....',
+            '......755.',
+            '...$.*....',
+            '.664.598..',
+        ]
+
+    @pytest.mark.parametrize(
+        'position, expected',
+        (
+            (Position(0, 0), True),  # '4'
+            (Position(3, 1), False),  # '*'
+            (Position(0, 1), False),  # '.'
+        ),
+    )
+    def test_is_didit(self, small_ex_txt, position: Position, expected: bool):
+        schematic = Schematic.from_file(small_ex_txt)
+        assert schematic.is_digit(position) is expected
+
+    @pytest.mark.parametrize(
+        'position, expected',
+        (
+            (Position(0, 0), 467),  # at start of number + start of line
+            (Position(2, 6), 592),  # at start of number but not start of line
+            (Position(3, 2), 35),  # at end of number
+            (Position(7, 2), 633),  # in the middle
+            (Position(0, 4), 617),  # not next to a .
+            (Position(9, 5), 589),  # at end of number + end of line
+        ),
+    )
+    def test_extract_number_at(self, small_ex_txt, position: Position, expected: int):
+        schematic = Schematic.from_file(small_ex_txt)
+        schematic.data[5] = '.....+.589'  # change 58 to 589 and it finishes at the edge
+        assert schematic.is_digit(position), 'sanity'
+        assert schematic.extract_number_at(position) == expected
+
+    def test_find_numbers_adjacent_to_symbols(self, small_ex_txt):
+        schematic = Schematic.from_file(small_ex_txt)
+        result = schematic.find_numbers_adjacent_to_symbols()
+        # TODO(tr) not a good test if a piece number is repeated
+        assert set(result) == {
+            467,
+            # 114,  # not adjacent
+            35,
+            633,
+            617,
+            # 58,  # not adjacent
+            592,
+            755,
+            664,
+            598,
+        }
+
+
+class TestQ1:
+    def test_small_ex(self, small_ex_txt):
+        assert q1(Schematic.from_file(small_ex_txt)) == 4361
+
+    def test_input(self, input_txt):
+        assert q1(Schematic.from_file(input_txt)) == 546563
