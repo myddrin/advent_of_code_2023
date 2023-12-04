@@ -4,7 +4,9 @@ import pytest
 
 from day_04.compute import (
     Card,
+    CardDeck,
     q1,
+    q2,
 )
 
 
@@ -52,11 +54,32 @@ class TestCard:
         assert Card.from_line(line) == expected
 
 
+class TestCardDeck:
+    def test_from_file(self, small_ex_txt):
+        deck = CardDeck.from_file(small_ex_txt)
+        assert len(deck.winning_ref) == len(deck.cards) == 6
+        assert deck.winning_ref[0] == [1, 2, 3, 4]  # id: 2, 3, 4, 5
+        assert deck.winning_ref[1] == [2, 3]  # id: 3, 4
+        assert deck.winning_ref[2] == [3, 4]  # id 4, 5
+        # ...
+
+
 class TestQ1:
     def test_small_ex(self, small_ex_txt):
-        deck = Card.from_file(small_ex_txt)
+        deck = CardDeck.from_file(small_ex_txt)
         assert q1(deck) == 13
 
     def test_input(self, input_txt):
-        deck = Card.from_file(input_txt)
+        deck = CardDeck.from_file(input_txt)
         assert q1(deck) == 18619
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        deck = CardDeck.from_file(small_ex_txt)
+        assert deck.play() == (30 - len(deck.cards))
+        assert q2(deck) == 30
+
+    def test_input(self, input_txt):
+        deck = CardDeck.from_file(input_txt)
+        assert q2(deck) == 8063216
