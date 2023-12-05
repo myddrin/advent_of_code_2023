@@ -127,6 +127,15 @@ class Almanac:
 
         return cls(original_seeds=original_seeds, entries=entries)
 
+    def unpack_seed_ranges(self) -> Iterable[List[int]]:
+        if len(self.original_seeds) % 2 != 0:
+            raise ValueError('Need an even number of seeds')
+        left_seeds = list(self.original_seeds)
+        while left_seeds:
+            start = left_seeds.pop(0)
+            n = left_seeds.pop(0)
+            yield list(range(start, start + n))
+
     def convert(self, value: int, source: Subject, destination: Subject = Subject.Location) -> int:
         if destination == source:
             return value
@@ -153,10 +162,22 @@ def q1(almanac: Almanac) -> int:
     return min((almanac.convert(seed, Subject.Seed, Subject.Location) for seed in almanac.original_seeds))
 
 
+def q2(almanac: Almanac) -> int:
+    overall_min = None
+    for seed_range in almanac.unpack_seed_ranges():
+        print(f'  Handling range of {len(seed_range)} seeds')
+        current_min = min((almanac.convert(seed, Subject.Seed, Subject.Location) for seed in seed_range))
+        print(f'  {current_min=} {overall_min=}')
+        if overall_min is None or current_min < overall_min:
+            overall_min = current_min
+    return overall_min
+
+
 def main(filename: str):
     almanac = Almanac.from_file(filename)
 
     print(f'Q1: closest location is {q1(almanac)}')
+    print(f'Q2: closest location with range {q2(almanac)}')
 
 
 if __name__ == '__main__':

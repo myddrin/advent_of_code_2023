@@ -6,6 +6,7 @@ from day_05.compute import (
     Almanac,
     AlmanacEntry,
     Mapping,
+    q2,
     Subject,
     q1,
 )
@@ -93,6 +94,13 @@ class TestAlmanac:
             35,
         ]
 
+    def test_unpack_seed_ranges(self, small_ex_txt):
+        almanac = Almanac.from_file(small_ex_txt)
+        assert list(almanac.unpack_seed_ranges()) == [
+            list(range(79, 93)),
+            list(range(55, 68)),
+        ]
+
 
 class TestQ1:
     def test_small_ex(self, small_ex_txt):
@@ -100,3 +108,8 @@ class TestQ1:
 
     def test_input(self, input_txt):
         assert q1(Almanac.from_file(input_txt)) == 388071289
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert q2(Almanac.from_file(small_ex_txt)) == 46
