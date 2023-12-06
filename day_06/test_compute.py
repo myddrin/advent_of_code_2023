@@ -4,7 +4,8 @@ import pytest
 
 from day_06.compute import (
     Record,
-    q1,
+    count_points,
+    threaded_count_points,
 )
 
 
@@ -26,7 +27,16 @@ def input_txt():
 
 class TestQ1:
     def test_small_ex(self, small_ex_txt):
-        assert q1(Record.from_file(small_ex_txt)) == 288
+        assert count_points(Record.from_file(small_ex_txt)) == 288
 
     def test_input(self, input_txt):
-        assert q1(Record.from_file(input_txt)) == 440000
+        assert count_points(Record.from_file(input_txt)) == 440000
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert threaded_count_points(Record.from_file(small_ex_txt, fix_spaces=True)) == 71503
+
+    @pytest.mark.slow
+    def test_input(self, input_txt):
+        assert threaded_count_points(Record.from_file(input_txt, fix_spaces=True)) == 26187338
