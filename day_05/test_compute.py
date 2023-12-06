@@ -6,9 +6,9 @@ from day_05.compute import (
     Almanac,
     AlmanacEntry,
     Mapping,
-    q2,
     Subject,
     q1,
+    q2,
 )
 
 
