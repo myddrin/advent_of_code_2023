@@ -10,6 +10,7 @@ from typing import (
 
 
 class Card(Enum):
+    Jocker = '*'  # loaded as 'J'
     Two = '2'
     Three = '3'
     Four = '4'
@@ -26,7 +27,8 @@ class Card(Enum):
 
     @property
     def score(self) -> int:
-        return _score_list.index(self) + 2
+        # Jocker is 1, other cards are their original value
+        return _score_list.index(self) + 1
 
     @classmethod
     def from_line(cls, line: str) -> List[Self]:
@@ -56,7 +58,7 @@ class Hand:
     bid: int
 
     @classmethod
-    def get_kind(cls, cards: List[Card]) -> Kind:
+    def _get_kind(cls, cards: List[Card]) -> Kind:
         assert len(cards) == 5
         hand: Dict[Card, int] = defaultdict(int)
         for card in cards:
@@ -84,6 +86,19 @@ class Hand:
             raise ValueError(f'Unexpected {cards}')
 
     @classmethod
+    def get_kind(cls, original_cards: List[Card]) -> Kind:
+        """Brute force to get best kind"""
+        best_kind = cls._get_kind(original_cards)
+        if Card.Jocker not in original_cards:
+            return best_kind
+        other_cards = {c for c in original_cards if c != Card.Jocker}
+        for card in other_cards:
+            alt_cards = [original if original != Card.Jocker else card for original in original_cards]
+            if best_kind < (alt_kind := cls._get_kind(alt_cards)):
+                best_kind = alt_kind
+        return best_kind
+
+    @classmethod
     def from_line(cls, line: str) -> Self:
         cards_str, bid_str = line.split(' ')
         cards = Card.from_line(cards_str)
@@ -95,7 +110,7 @@ class Hand:
         )
 
     @classmethod
-    def from_file(cls, filename: str) -> List[Self]:
+    def from_file(cls, filename: str, *, j_is_joker: bool = False) -> List[Self]:
         print(f'Loading {filename}')
         hands = []
         with open(filename, 'r') as fin:
@@ -103,6 +118,8 @@ class Hand:
                 line = line.replace('\n', '')
                 if not line:
                     continue
+                if j_is_joker:
+                    line = line.replace(Card.Jack.value, Card.Jocker.value)
                 hands.append(cls.from_line(line))
         print(f'  -> {len(hands)} hands loaded')
         return hands
@@ -117,15 +134,14 @@ class Hand:
         return False  # they are equal!
 
 
-def q1(hands: List[Hand]) -> int:
+def compute_score(hands: List[Hand]) -> int:
     sorted_hands = sorted(hands)
     return sum((i * hand.bid for i, hand in enumerate(sorted_hands, start=1)))
 
 
 def main(filename: str):
-    hands = Hand.from_file(filename)
-
-    print(f'Q1: total score: {q1(hands)}')
+    print(f'Q1: total score: {compute_score(Hand.from_file(filename))}')
+    print(f'Q2: total score: {compute_score(Hand.from_file(filename, j_is_joker=True))}')
 
 
 if __name__ == '__main__':
