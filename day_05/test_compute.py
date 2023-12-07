@@ -155,17 +155,23 @@ class TestAlmanac:
                 assert v, f'For {i}->{simpler.convert(i)} vs {i}->{seed_entry.convert(i)}->{other_entry.convert(seed_entry.convert(i))}'
 
 
+@pytest.mark.parametrize('simplify', (True, False))
 class TestQ1:
-    def test_small_ex(self, small_ex_txt):
-        assert q1(Almanac.from_file(small_ex_txt)) == 35
+    def test_small_ex(self, small_ex_txt, simplify):
+        assert q1(Almanac.from_file(small_ex_txt, simplify=simplify)) == 35
 
-    def test_input(self, input_txt):
-        assert q1(Almanac.from_file(input_txt)) == 388071289
+    def test_input(self, input_txt, simplify):
+        assert q1(Almanac.from_file(input_txt, simplify=simplify)) == 388071289
 
 
+@pytest.mark.parametrize('simplify', (True, False))
 class TestQ2:
-    def test_small_ex_brute(self, small_ex_txt):
-        assert q2_brute(Almanac.from_file(small_ex_txt)) == 46
+    def test_small_ex_brute(self, small_ex_txt, simplify):
+        assert q2_brute(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
 
-    def test_small_ex_threaded(self, small_ex_txt):
-        assert q2_threaded(Almanac.from_file(small_ex_txt)) == 46
+    def test_small_ex_threaded(self, small_ex_txt, simplify):
+        assert q2_threaded(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
+
+    # def test_input(self, input_txt):
+    #     # as it is it takes 4h!
+    #     assert q2_threaded(Almanac.from_file(input_txt, simplify=True)) == 84206669
