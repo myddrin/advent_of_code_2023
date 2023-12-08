@@ -5,6 +5,7 @@ import pytest
 from day_08.compute import (
     NodeMap,
     q1,
+    q2,
 )
 
 
@@ -25,6 +26,14 @@ def small_ex2_txt():
 
 
 @pytest.fixture(scope='session')
+def small_ex3_txt():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'small_ex3.txt',
+    )
+
+
+@pytest.fixture(scope='session')
 def input_txt():
     return os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
@@ -41,3 +50,11 @@ class TestQ1:
 
     def test_input_txt(self, input_txt):
         assert q1(NodeMap.from_file(input_txt)) == 15989
+
+
+class TestQ2:
+    def test_small_ex3(self, small_ex3_txt):
+        assert q2(NodeMap.from_file(small_ex3_txt)) == 6
+
+    def test_input_txt(self, input_txt):
+        assert q2(NodeMap.from_file(input_txt)) == 13830919117339
