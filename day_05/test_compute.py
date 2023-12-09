@@ -1,5 +1,6 @@
 import os
 from operator import attrgetter
+from typing import List
 
 import pytest
 
@@ -7,9 +8,11 @@ from day_05.compute import (
     Almanac,
     AlmanacEntry,
     Mapping,
+    Range,
     Subject,
     q1,
     q2_brute,
+    q2_range,
     q2_threaded,
 )
 
@@ -28,6 +31,30 @@ def input_txt():
         os.path.dirname(os.path.realpath(__file__)),
         'input.txt',
     )
+
+
+class TestMapping:
+    @pytest.mark.parametrize(
+        'data, exp_conv, exp_pending',
+        (
+            (Range(5, 4), Range(7, 4), []),
+            (Range(3, 4), Range(6, 3), [Range(3, 1)]),
+            (Range(7, 4), Range(9, 3), [Range(10, 1)]),
+            (Range(2, 10), Range(6, 6), [Range(2, 2), Range(10, 2)]),
+            (Range(0, 2), None, [Range(0, 2)]),
+            (Range(12, 2), None, [Range(12, 2)]),
+            (Range(9, 2), Range(11, 1), [Range(10, 1)]),
+        ),
+    )
+    def test_convert_range(self, data: Range, exp_conv: List[Range], exp_pending: List[Range]):
+        mapping = Mapping(6, 4, 6)  # 4 -> 6 until 9 -> 11
+
+        converted, pending = mapping.convert_range(data)
+        if exp_conv is None:
+            assert converted is None
+        else:
+            assert converted == exp_conv, 'converted'
+        assert pending == exp_pending, 'pending'
 
 
 class TestAlmanacEntry:
@@ -60,7 +87,7 @@ class TestAlmanacEntry:
                 key=attrgetter('source_start'),
             ),
         )
-        assert almanac_entry._dumb_convert(seed) == almanac_entry.convert(seed) == soil
+        assert almanac_entry._dumb_convert(seed) == almanac_entry.convert_int(seed) == soil
 
     @pytest.mark.parametrize('seed, soil', seed_to_soil)
     def test_revert(self, seed, soil):
@@ -76,8 +103,134 @@ class TestAlmanacEntry:
 
     def test_original_seed_to_soil(self, small_ex_txt):
         almanac = Almanac.from_file(small_ex_txt)
-        soil = [almanac.entries[Subject.Seed].convert(seed) for seed in almanac.original_seeds]
+        soil = [almanac.entries[Subject.Seed].convert_int(seed) for seed in almanac.original_seeds]
         assert soil == [81, 14, 57, 13]
+
+    @pytest.mark.parametrize(
+        'data, exp_ranges',
+        (
+            ([Range(0, 2)], [Range(0, 2)]),
+            (
+                [Range(0, 2), Range(2, 10)],
+                [
+                    # 0-11 yields:
+                    Range(0, 2),
+                    # 2-11 yields:
+                    Range(2, 2),
+                    Range(6, 6),
+                    Range(10, 1),
+                    Range(5, 1),
+                ],
+            ),
+            (
+                [
+                    Range(0, 2),
+                    Range(2, 10),
+                    Range(3, 3),
+                ],
+                [
+                    # 0-11 yields:
+                    Range(0, 2),
+                    # 2-11 yields:
+                    Range(2, 2),
+                    Range(6, 6),
+                    Range(10, 1),
+                    Range(5, 1),
+                    # 3-6 yields:
+                    Range(3, 1),
+                    Range(6, 2),
+                ],
+            ),
+            (
+                [
+                    Range(0, 2),
+                    Range(2, 10),
+                    Range(3, 3),
+                    Range(5, 4),
+                ],
+                [
+                    # 0-11 yields:
+                    Range(0, 2),
+                    # 2-11 yields:
+                    Range(2, 2),
+                    Range(6, 6),
+                    Range(10, 1),
+                    Range(5, 1),
+                    # 3-6 yields:
+                    Range(3, 1),
+                    Range(6, 2),
+                    # 5-8 yields:
+                    Range(7, 4),
+                ],
+            ),
+            (
+                [
+                    Range(0, 2),
+                    Range(2, 10),
+                    Range(3, 3),
+                    Range(5, 4),
+                    Range(7, 4),
+                ],
+                [
+                    # 0-11 yields:
+                    Range(0, 2),
+                    # 2-11 yields:
+                    Range(2, 2),
+                    Range(6, 6),
+                    Range(10, 1),
+                    Range(5, 1),
+                    # 3-6 yields:
+                    Range(3, 1),
+                    Range(6, 2),
+                    # 5-8 yields:
+                    Range(7, 4),
+                    # 7-10 yields
+                    Range(9, 3),
+                    Range(10, 1),
+                ],
+            ),
+            (
+                [
+                    Range(0, 2),
+                    Range(2, 10),
+                    Range(3, 3),
+                    Range(5, 4),
+                    Range(7, 4),
+                    Range(12, 2),
+                ],
+                [
+                    # 0-11 yields:
+                    Range(0, 2),
+                    # 2-11 yields:
+                    Range(2, 2),
+                    Range(6, 6),
+                    Range(10, 1),
+                    Range(5, 1),
+                    # 3-6 yields:
+                    Range(3, 1),
+                    Range(6, 2),
+                    # 5-8 yields:
+                    Range(7, 4),
+                    # 7-10 yields
+                    Range(9, 3),
+                    Range(10, 1),
+                    # 12-13 yields
+                    Range(6, 1),
+                    Range(13, 1),
+                ],
+            ),
+        ),
+    )
+    def test_convert_range(self, data, exp_ranges):
+        almanac_entry = AlmanacEntry(
+            source=Subject.Seed,
+            destination=Subject.Soil,
+            mappings=[
+                Mapping(6, 4, 6),
+                Mapping(5, 11, 2),
+            ],
+        )
+        assert almanac_entry.convert_ranges(data) == sorted(set(exp_ranges))
 
 
 class TestAlmanac:
@@ -105,7 +258,7 @@ class TestAlmanac:
 
     def test_convert(self, small_ex_txt):
         almanac = Almanac.from_file(small_ex_txt)
-        locations = [almanac.convert(seed, Subject.Seed) for seed in almanac.original_seeds]
+        locations = [almanac.convert_int(seed, Subject.Seed) for seed in almanac.original_seeds]
         assert locations == [
             82,
             43,
@@ -150,9 +303,9 @@ class TestAlmanac:
             assert ed == 99, 'sanity'
 
         for i in range(st, ed + 1):
-            v = simpler.convert(i) == other_entry.convert(seed_entry.convert(i))
+            v = simpler.convert_int(i) == other_entry.convert_int(seed_entry.convert_int(i))
             if not v:
-                assert v, f'For {i}->{simpler.convert(i)} vs {i}->{seed_entry.convert(i)}->{other_entry.convert(seed_entry.convert(i))}'
+                assert v, f'For {i}->{simpler.convert_int(i)} vs {i}->{seed_entry.convert_int(i)}->{other_entry.convert_int(seed_entry.convert_int(i))}'
 
 
 @pytest.mark.parametrize('simplify', (True, False))
@@ -172,6 +325,8 @@ class TestQ2:
     def test_small_ex_threaded(self, small_ex_txt, simplify):
         assert q2_threaded(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
 
-    # def test_input(self, input_txt):
-    #     # as it is it takes 4h!
-    #     assert q2_threaded(Almanac.from_file(input_txt, simplify=True)) == 84206669
+    def test_small_ex_range(self, small_ex_txt, simplify):
+        assert q2_range(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
+
+    def test_input(self, input_txt, simplify):
+        assert q2_range(Almanac.from_file(input_txt, simplify=simplify)) == 84206669
