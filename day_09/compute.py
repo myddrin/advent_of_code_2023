@@ -1,8 +1,10 @@
 import dataclasses
 from argparse import ArgumentParser
 from typing import (
+    Iterable,
     List,
     Self,
+    Tuple,
 )
 
 
@@ -11,15 +13,16 @@ class DataSeq:
     data: List[int]
 
     @classmethod
-    def _extrapolate(cls, data: List[int]) -> int:
+    def _extrapolate(cls, data: List[int]) -> Tuple[int, int]:
+        """Return a new value for the beginning and the end"""
         if all((d == 0 for d in data)):
-            return 0
+            return 0, 0
 
         diff = []
         for i in range(1, len(data)):
             diff.append(data[i] - data[i - 1])
-        diff_etra = cls._extrapolate(diff)
-        return data[-1] + diff_etra
+        diff_etra_st, diff_extra_ed = cls._extrapolate(diff)
+        return data[0] - diff_etra_st, data[-1] + diff_extra_ed
 
     @classmethod
     def from_line(cls, line: str) -> Self:
@@ -27,27 +30,33 @@ class DataSeq:
         return cls(data)
 
     @classmethod
-    def from_file(cls, filename: str) -> List[Self]:
+    def from_file(cls, filename: str) -> Iterable[Self]:
         print(f'Loading {filename}')
-        data = []
         with open(filename, 'r') as fin:
             for line in fin:
-                data.append(cls.from_line(line))
-        return data
+                yield cls.from_line(line)
 
     def extrapolate(self) -> Self:
-        self.data.append(self._extrapolate(self.data))
+        new_st, new_ed = self._extrapolate(self.data)
+        self.data.insert(0, new_st)
+        self.data.append(new_ed)
         return self
 
 
-def q1(datalog: List[DataSeq]) -> int:
-    return sum((d.extrapolate().data[-1] for d in datalog))
+def q1(extrapolated: List[DataSeq]) -> int:
+    return sum((d.data[-1] for d in extrapolated))
+
+
+def q2(extrapolated: List[DataSeq]) -> int:
+    # assumes q1 ran extrapolate already
+    return sum((d.data[0] for d in extrapolated))
 
 
 def main(filename: str):
-    datalog = DataSeq.from_file(filename)
+    extrapolated_data = [d.extrapolate() for d in DataSeq.from_file(filename)]
 
-    print(f'Q1: first extrapolation: {q1(datalog)}')
+    print(f'Q1: last entry extrapolation sum: {q1(extrapolated_data)}')
+    print(f'Q2: first entry extrapolation sum: {q2(extrapolated_data)}')
 
 
 if __name__ == '__main__':
