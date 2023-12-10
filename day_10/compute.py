@@ -6,6 +6,7 @@ from typing import (
     List,
     Optional,
     Self,
+    Set,
 )
 
 
@@ -136,15 +137,73 @@ class PipeMap:
                 # else we know about it already
         print(f'Built map in {it} iterations')
 
+    @property
+    def width(self) -> int:
+        return len(self.raw_data[0])
+
+    @property
+    def height(self) -> int:
+        return len(self.raw_data)
+
+    def _travel(self, target: Position, direction: Direction) -> int:
+        if direction == Direction.North:
+            cross = {Direction.East, Direction.West}
+            vector = Position(0, -1)
+            current = Position(target.x, self.height - 1)
+        elif direction == Direction.South:
+            cross = {Direction.East, Direction.West}
+            vector = Position(0, 1)
+            current = Position(target.x, 0)
+        elif direction == Direction.East:
+            cross = {Direction.North, Direction.South}
+            vector = Position(1, 0)
+            current = Position(0, target.y)
+        elif direction == Direction.West:
+            cross = {Direction.North, Direction.South}
+            vector = Position(-1, 0)
+            current = Position(self.width - 1, target.y)
+        else:
+            raise ValueError(f'Unexpected {direction}')
+
+        crossed = 0
+        while current != target:
+            pipe = self.loop_map.get(current)
+            if pipe and (pipe.first in cross or pipe.second in cross):
+                crossed += 1
+            current = Position(current.x + vector.x, current.y + vector.y)
+
+        return crossed
+
+    def find_area(self) -> Set[Position]:
+        checked: Dict[Position, bool] = {}
+        for y in range(self.height):
+            for x in range(self.width):
+                current = Position(x, y)
+                if current in self.loop_map:
+                    continue
+
+                # maybe to make it faster check neighbours?
+                checked[current] = all((
+                    self._travel(current, d) % 2 == 1
+                    for d in Direction
+                ))
+
+        return {k for k, v in checked.items() if v}
+
 
 def q1(pipe_map: PipeMap) -> int:
     return max((p.distance for p in pipe_map.loop_map.values()))
+
+
+def q2(pipe_map: PipeMap) -> int:
+    return len(pipe_map.find_area())
 
 
 def main(filename: str):
     pipe_map = PipeMap.from_file(filename)
 
     print(f'Q1: furthest: {q1(pipe_map)}')
+    print(f'Q2: enclosed: {q2(pipe_map)}')
 
 
 if __name__ == '__main__':

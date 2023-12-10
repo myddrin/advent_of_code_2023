@@ -8,6 +8,7 @@ from day_10.compute import (
     PipeMap,
     Position,
     q1,
+    q2,
 )
 
 
@@ -24,6 +25,30 @@ def small_ex2_txt():
     return os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         'small_ex2.txt',
+    )
+
+
+@pytest.fixture(scope='session')
+def small_ex3_txt():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'small_ex3.txt',
+    )
+
+
+@pytest.fixture(scope='session')
+def small_ex4_txt():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'small_ex4.txt',
+    )
+
+
+@pytest.fixture(scope='session')
+def small_ex5_txt():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'small_ex5.txt',
     )
 
 
@@ -78,6 +103,43 @@ class TestPipeMap:
             )
         }
 
+    def test_find_area_ex3(self, small_ex3_txt):
+        pipe_map = PipeMap.from_file(small_ex3_txt)
+        assert pipe_map.find_area() == {
+            Position(2, 6),
+            Position(3, 6),
+            Position(7, 6),
+            Position(8, 6),
+        }
+
+    def test_find_area_ex4(self, small_ex4_txt):
+        pipe_map = PipeMap.from_file(small_ex4_txt)
+        assert pipe_map.find_area() == {
+            Position(13, 3),
+            Position(7, 4),
+            Position(8, 4),
+            Position(9, 4),
+            Position(7, 5),
+            Position(8, 5),
+            Position(6, 6),
+            Position(13, 6),
+        }
+
+    def test_find_area_ex5(self, small_ex5_txt):
+        pipe_map = PipeMap.from_file(small_ex5_txt)
+        assert pipe_map.find_area() == {
+            Position(14, 3),
+            Position(10, 4),
+            Position(11, 4),
+            Position(12, 4),
+            Position(13, 4),
+            Position(11, 5),
+            Position(12, 5),
+            Position(13, 5),
+            Position(13, 6),
+            Position(14, 6),
+        }
+
 
 class TestQ1:
     def test_small_ex1(self, small_ex1_txt):
@@ -88,3 +150,17 @@ class TestQ1:
 
     def test_input(self, input_txt):
         return q1(PipeMap.from_file(input_txt)) == 6640
+
+
+class TestQ2:
+    def test_small_ex3(self, small_ex3_txt):
+        assert q2(PipeMap(small_ex3_txt)) == 4
+
+    def test_small_ex4(self, small_ex4_txt):
+        assert q2(PipeMap.from_file(small_ex4_txt)) == 8
+
+    def test_small_ex5(self, small_ex5_txt):
+        assert q2(PipeMap.from_file(small_ex5_txt)) == 10
+
+    def test_input(self, input_txt):
+        assert q2(PipeMap.from_file(input_txt)) == 42  # not the real value
