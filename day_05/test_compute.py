@@ -13,7 +13,6 @@ from day_05.compute import (
     q1,
     q2_brute,
     q2_range,
-    q2_threaded,
 )
 
 
@@ -269,8 +268,8 @@ class TestAlmanac:
     def test_unpack_seed_ranges(self, small_ex_txt):
         almanac = Almanac.from_file(small_ex_txt)
         assert list(almanac.unpack_seed_ranges()) == [
-            (79, 93 - 79),
-            (55, 68 - 55),
+            Range(79, 93 - 79),
+            Range(55, 68 - 55),
         ]
 
     def test_unpack_seeds(self, small_ex_txt):
@@ -321,9 +320,6 @@ class TestQ1:
 class TestQ2:
     def test_small_ex_brute(self, small_ex_txt, simplify):
         assert q2_brute(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
-
-    def test_small_ex_threaded(self, small_ex_txt, simplify):
-        assert q2_threaded(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
 
     def test_small_ex_range(self, small_ex_txt, simplify):
         assert q2_range(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46

@@ -345,19 +345,14 @@ class Almanac:
             obj = obj.simplify()
         return obj
 
-    def unpack_seed_ranges(self, max_size: int = 10000000) -> Iterable[Tuple[int, int]]:
+    def unpack_seed_ranges(self) -> Iterable[Range]:
         if len(self.original_seeds) % 2 != 0:
             raise ValueError('Need an even number of seeds')
         left_seeds = list(self.original_seeds)
         while left_seeds:
             start = left_seeds.pop(0)
             n = left_seeds.pop(0)
-            if max_size < 0:
-                max_size = n
-            while n > 0:
-                yield start, min(n, max_size)
-                n -= max_size
-                start += max_size
+            yield Range(start, n)
 
     def unpack_seeds(self) -> Iterable[int]:
         if len(self.original_seeds) % 2 != 0:
@@ -427,8 +422,6 @@ def q1(almanac: Almanac) -> int:
 
 
 def q2_brute(almanac: Almanac, print_at: int = 1000000) -> int:
-    almanac = almanac.simplify()  # make things slower...
-
     current_min = None
     unpacked_seeds_size = sum((almanac.original_seeds[2 * i + 1] for i in range(len(almanac.original_seeds) // 2)))
     print(f'Unpacked {len(almanac.original_seeds)} to {unpacked_seeds_size} seeds')
@@ -453,62 +446,13 @@ def q2_range(almanac: Almanac) -> int:
     start_time = time.time()
 
     current_min = None
-    for range_st, range_len in almanac.unpack_seed_ranges(max_size=-1):
-        location = almanac.convert_smallest_range(Range(range_st, range_len), Subject.Seed, Subject.Location)
+    for data in almanac.unpack_seed_ranges():
+        location = almanac.convert_smallest_range(data, Subject.Seed, Subject.Location)
         if current_min is None or location < current_min:
             current_min = location
 
     print(f'Computed in {time.time() - start_time:0.2f} seconds')
     return current_min.start
-
-
-class ThreadedCompute:
-    def __init__(self, *, almanac: Almanac, seed_range: Tuple[int, int], name: str):
-        self.almanac = almanac
-        self.seed_range = seed_range
-        # self.found_min = None
-        self.name = name
-        self.print_at = 1000000
-        # super().__init__(*args, **kwargs)
-
-    def run(self) -> Optional[int]:
-        found_min = None
-        start_time = last_time = time.time()
-        seed_start, unpacked_seeds_size = self.seed_range
-
-        print(f' {self.name} is running for {unpacked_seeds_size} seeds')
-        for i, seed in enumerate(range(seed_start, seed_start + unpacked_seeds_size), start=1):
-            location = self.almanac.convert_int(seed, Subject.Seed, Subject.Location)
-            if found_min is None or location < found_min:
-                found_min = location
-            if i % self.print_at == 0:
-                new_time = time.time()
-                current_duration = new_time - last_time
-                estimate = timedelta(seconds=(unpacked_seeds_size - i) * (current_duration / self.print_at))
-                print(
-                    f' {self.name} after {i}/{unpacked_seeds_size} current_min={found_min} in {current_duration:0.2f}s -> estimate {estimate} left',
-                )
-                last_time = new_time
-
-        print(f' {self.name} completed in {time.time() - start_time:0.2f}s')
-        return found_min
-
-
-def q2_threaded(almanac: Almanac, max_workers: int = None):
-    # passing None runs with number of CPUs
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        wip = []
-        total_seeds = 0
-        for i, seed_batch in enumerate(almanac.unpack_seed_ranges()):  # type: int, Tuple[int, int]
-            total_seeds += seed_batch[1]
-            t = ThreadedCompute(
-                almanac=almanac,
-                seed_range=seed_batch,
-                name=f'compute_{i:03d}',
-            )
-            wip.append(executor.submit(t.run))
-        print(f'Created {len(wip)} tasks handled by {max_workers} workers to compute {total_seeds} seeds')
-        return min((f.result() for f in wip))
 
 
 def main(filename: str, simplify: bool):
