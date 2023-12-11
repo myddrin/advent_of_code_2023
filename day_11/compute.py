@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import (
     Dict,
     Iterable,
+    List,
     Self,
 )
 
@@ -49,58 +50,60 @@ class GalaxyMap:
                     x += 1
         return cls(universe, width=width, height=height)
 
-    def _expand_vertically(self):
-        vertical_map = defaultdict(list)
+    def _expand_vertically(self, age: int):
+        vertical_map: Dict[int, List[Position]] = defaultdict(list)
         for position in self.universe.keys():
             vertical_map[position.y].append(position)
 
         for y in range(self.height, -1, -1):
             if y in vertical_map:
                 continue  # we have a galaxy on that column
-            shifted = False
-            for shift_y in range(self.height - 1, y, -1):
-                positions = vertical_map.pop(shift_y, [])
-                new_positions = []
-                for p in positions:
-                    galaxy = self.universe.pop(p)
-                    new_p = Position(p.x, shift_y + 1)
-                    self.universe[new_p] = galaxy
-                    new_positions.append(new_p)
-                if new_positions:
-                    vertical_map[shift_y + 1] = new_positions
-                    shifted = True
+            shifted: Dict[Position, int] = {}
+            for shift_y in list(vertical_map.keys()):
+                if shift_y > y:
+                    positions = vertical_map.pop(shift_y, [])
+                    for p in positions:
+                        galaxy = self.universe.pop(p)
+                        new_p = Position(p.x, shift_y + age)
+                        shifted[new_p] = galaxy
+
             if shifted:
                 # keep height up to date
-                self.height += 1
+                self.height += age
+                # rebuild maps for the next one
+                for position, galaxy in shifted.items():
+                    self.universe[position] = galaxy
+                    vertical_map[position.y].append(position)
 
-    def _expand_horizontally(self):
-        horizontal_map = defaultdict(list)
+    def _expand_horizontally(self, age: int):
+        horizontal_map: Dict[int, List[Position]] = defaultdict(list)
         for position in self.universe.keys():
             horizontal_map[position.x].append(position)
 
         for x in range(self.width, -1, -1):
             if x in horizontal_map:
                 continue  # we have a galaxy on that row
-            shifted = False
-            for shift_x in range(self.width - 1, x, -1):
-                positions = horizontal_map.pop(shift_x, [])
-                new_positions = []
-                for p in positions:
-                    galaxy = self.universe.pop(p)
-                    new_p = Position(shift_x + 1, p.y)
-                    self.universe[new_p] = galaxy
-                    new_positions.append(new_p)
-                if new_positions:
-                    horizontal_map[shift_x + 1] = new_positions
-                    shifted = True
+            shifted: Dict[Position, int] = {}
+            for shift_x in list(horizontal_map.keys()):
+                if shift_x > x:
+                    positions = horizontal_map.pop(shift_x, [])
+                    for p in positions:
+                        galaxy = self.universe.pop(p)
+                        new_p = Position(shift_x + age, p.y)
+                        shifted[new_p] = galaxy
+
             if shifted:
                 # keep width up to date
-                self.width += 1
+                self.width += age
+                # rebuild the maps for the next one
+                for position, galaxy in shifted.items():
+                    self.universe[position] = galaxy
+                    horizontal_map[position.x].append(position)
 
-    def expand(self) -> Self:
+    def expand(self, age: int = 2) -> Self:
         """find all empty rows and columns and make them count as double"""
-        self._expand_vertically()
-        self._expand_horizontally()
+        self._expand_vertically(age - 1)
+        self._expand_horizontally(age - 1)
         return self
 
     def distances(self) -> Iterable[int]:
@@ -111,14 +114,13 @@ class GalaxyMap:
                 yield current.manhattan_distance(next_position)
 
 
-def q1(galaxy: GalaxyMap) -> int:
+def sum_distances(galaxy: GalaxyMap) -> int:
     return sum(galaxy.distances())
 
 
 def main(filename: str):
-    galaxy = GalaxyMap.from_file(filename).expand()
-
-    print(f'Q1: sum of distances is {q1(galaxy)}')
+    print(f'Q1: sum of distances is {sum_distances(GalaxyMap.from_file(filename).expand(2))}')
+    print(f'Q2: sum of distances is {sum_distances(GalaxyMap.from_file(filename).expand(1000000))}')
 
 
 if __name__ == '__main__':

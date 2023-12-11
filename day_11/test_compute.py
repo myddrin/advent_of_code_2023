@@ -6,7 +6,7 @@ import pytest
 from day_11.compute import (
     GalaxyMap,
     Position,
-    q1,
+    sum_distances,
 )
 
 
@@ -43,7 +43,7 @@ class TestGalaxyMap:
             Position(4, 9): 8,
         }
 
-    def test_expand(self, small_ex_txt):
+    def test_expand_2(self, small_ex_txt):
         data = GalaxyMap.from_file(small_ex_txt).expand()
         assert data.width == 13
         assert data.height == 12
@@ -62,10 +62,26 @@ class TestGalaxyMap:
             key=itemgetter(1),
         )
 
+    def test_expand_10(self, small_ex_txt):
+        data = GalaxyMap.from_file(small_ex_txt).expand(10)
+        assert sum_distances(data) == 1030
+
+    def test_expan_100(self, small_ex_txt):
+        data = GalaxyMap.from_file(small_ex_txt).expand(100)
+        assert sum_distances(data) == 8410
+
 
 class TestQ1:
     def test_small_ex(self, small_ex_txt):
-        assert q1(GalaxyMap.from_file(small_ex_txt).expand()) == 374
+        assert sum_distances(GalaxyMap.from_file(small_ex_txt).expand(2)) == 374
 
     def test_input(self, input_txt):
-        assert q1(GalaxyMap.from_file(input_txt).expand()) == 9795148
+        assert sum_distances(GalaxyMap.from_file(input_txt).expand(2)) == 9795148
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert sum_distances(GalaxyMap.from_file(small_ex_txt).expand(1000000)) == 82000210
+
+    def test_input(self, input_txt):
+        assert sum_distances(GalaxyMap.from_file(input_txt).expand(1000000)) == 650672493820
