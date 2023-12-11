@@ -16,6 +16,14 @@ class Direction(Enum):
     East = 3
     West = 4
 
+    @property
+    def is_vertical(self) -> bool:
+        return self in {self.North, self.South}
+
+    @property
+    def is_horizontal(self) -> bool:
+        return self in {self.East, self.West}
+
 
 @dataclasses.dataclass(frozen=True, repr=False)
 class Position:
@@ -53,6 +61,14 @@ class Pipe:
             return [self.position.neighbour(direction) for direction in Direction]
 
         return [self.position.neighbour(direction) for direction in (self.first, self.second)]
+
+    @property
+    def is_vertical(self) -> bool:
+        return self.first.is_vertical or self.second.is_vertical
+
+    @property
+    def is_horizontal(self) -> bool:
+        return self.first.is_horizontal or self.second.is_horizontal
 
     @classmethod
     def from_str(cls, position: Position, distance: int, value: str) -> Optional[Self]:
@@ -174,7 +190,7 @@ class PipeMap:
 
         return crossed
 
-    def find_area(self) -> Set[Position]:
+    def find_area_fail(self) -> Set[Position]:
         checked: Dict[Position, bool] = {}
         for y in range(self.height):
             for x in range(self.width):
@@ -189,6 +205,76 @@ class PipeMap:
                 ))
 
         return {k for k, v in checked.items() if v}
+
+    def has_vertical_neighbour(self, pipe: Pipe) -> bool:
+        interesting_neighbours = [
+            pipe.position.neighbour(Direction.West),
+            pipe.position.neighbour(Direction.East),
+        ]
+        for neighbour in interesting_neighbours:
+            other = self.loop_map.get(neighbour)
+            if other is not None and other.is_vertical:
+                return True
+        return False
+
+    def has_horizontal_neighbour(self, pipe: Pipe) -> bool:
+        interesting_neighbours = [
+            pipe.position.neighbour(Direction.North),
+            pipe.position.neighbour(Direction.South),
+        ]
+        for neighbour in interesting_neighbours:
+            other = self.loop_map.get(neighbour)
+            if other is not None and other.first.is_horizontal:
+                return True
+        return False
+
+    def find_area(self) -> Set[Position]:
+        left_to_search = set()
+        found_outside = set()
+
+        for d in Direction:
+            neighbour = self.start.neighbour(d)
+            if neighbour not in self.loop_map:
+                left_to_search.add(neighbour)
+
+        vectors = {
+            Direction.North: Position(0, -1),
+            Direction.South: Position(0, 1),
+            Direction.East: Position(1, 0),
+            Direction.West: Position(-1, 0),
+        }
+
+        it = 0
+        while left_to_search:
+            it += 1
+            current = left_to_search.pop()
+            if it % 10000 == 1:
+                print(f'Checking {current} {it}/{self.width * self.height}')
+
+            found_outside.add(current)
+            for d in Direction:
+                neighbour = current.neighbour(d)
+                next_pipe = self.loop_map.get(neighbour)
+                if neighbour in found_outside:
+                    continue  # we've handled it before
+                elif next_pipe is not None:
+                    # we have to check the neighbour opposite the pipe to know if we could
+                    # "squeeze past" it
+
+
+                    pass
+                else:
+                    # not a know location: check it next
+                    left_to_search.add(neighbour)
+
+        inside = set()
+        for y in range(self.height):
+            for x in range(self.width):
+                current = Position(x, y)
+                if current in self.loop_map or current in found_outside:
+                    continue
+                inside.add(current)
+        return inside
 
 
 def q1(pipe_map: PipeMap) -> int:

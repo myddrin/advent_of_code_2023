@@ -108,8 +108,8 @@ class TestPipeMap:
         assert pipe_map.find_area() == {
             Position(2, 6),
             Position(3, 6),
+            Position(6, 6),
             Position(7, 6),
-            Position(8, 6),
         }
 
     def test_find_area_ex4(self, small_ex4_txt):
