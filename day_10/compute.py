@@ -24,6 +24,18 @@ class Direction(Enum):
     def is_horizontal(self) -> bool:
         return self in {self.East, self.West}
 
+    @property
+    def opposite_direction(self) -> Self:
+        if self == self.North:
+            return self.South
+        elif self == self.South:
+            return self.North
+        elif self == self.East:
+            return self.West
+        elif self == self.West:
+            return self.East
+        raise ValueError(f'Unexpected {self}')
+
 
 @dataclasses.dataclass(frozen=True, repr=False)
 class Position:
@@ -69,6 +81,26 @@ class Pipe:
     @property
     def is_horizontal(self) -> bool:
         return self.first.is_horizontal or self.second.is_horizontal
+
+    def has(self, a: Direction, b: Direction) -> bool:
+        return (self.first == a and self.second == b) or (self.first == b and self.second == a)
+
+    def to_str(self, fancy: bool = True) -> str:
+        if self.has(Direction.North, Direction.South):
+            return '║' if fancy else '|'
+        elif self.has(Direction.East, Direction.West):
+            return '═' if fancy else '-'
+        elif self.has(Direction.North, Direction.East):
+            return '╚' if fancy else 'L'
+        elif self.has(Direction.North, Direction.West):
+            return '╝' if fancy else 'J'
+        elif self.has(Direction.South, Direction.West):
+            return '╗' if fancy else '7'
+        elif self.has(Direction.South, Direction.East):
+            return '╔' if fancy else 'F'
+        elif self.first is None and self.second is None:
+            return '╬' if fancy else 'S'
+        raise ValueError(f'Unexpected {self.first} {self.second}')
 
     @classmethod
     def from_str(cls, position: Position, distance: int, value: str) -> Optional[Self]:
@@ -199,10 +231,7 @@ class PipeMap:
                     continue
 
                 # maybe to make it faster check neighbours?
-                checked[current] = all((
-                    self._travel(current, d) % 2 == 1
-                    for d in Direction
-                ))
+                checked[current] = all((self._travel(current, d) % 2 == 1 for d in Direction))
 
         return {k for k, v in checked.items() if v}
 
@@ -228,41 +257,92 @@ class PipeMap:
                 return True
         return False
 
-    def find_area(self) -> Set[Position]:
-        left_to_search = set()
-        found_outside = set()
+    def _squeeze(self, current: Position, direction: Direction, neighbour: Pipe) -> Optional[Position]:
+        vector = Position(neighbour.position.x - current.x, neighbour.position.y - current.y)
+        if direction.is_vertical:
+            if neighbour.first.is_horizontal:
+                stop_at = neighbour.first.opposite_direction
+            else:
+                stop_at = neighbour.second.opposite_direction
+        else:
+            if neighbour.first.is_vertical:
+                stop_at = neighbour.first.opposite_direction
+            else:
+                stop_at = neighbour.second.opposite_direction
 
-        for d in Direction:
-            neighbour = self.start.neighbour(d)
-            if neighbour not in self.loop_map:
-                left_to_search.add(neighbour)
+        while stop_at not in (neighbour.first, neighbour.second):
+            current = Position(neighbour.position.x + vector.x, neighbour.position.y + vector.y)
+            if current.x < 0 or current.x >= self.width or current.y < 0 or current.y >= self.height:
+                break  # end of map without finding a tile
+            neighbour = self.loop_map.get(current)
+            if neighbour is None:
+                # we hit an empty space and were not stopped
+                return current
+        # we were stopped or reached the end of the map
+        return None
 
-        vectors = {
-            Direction.North: Position(0, -1),
-            Direction.South: Position(0, 1),
-            Direction.East: Position(1, 0),
-            Direction.West: Position(-1, 0),
-        }
+    def find_area(self) -> Set[Position]:  # noqa
+        left_to_search: Set[Position] = set()
+        found_outside: Set[Position] = set()
+        ignored: Set[Position] = {self.start}
+
+        for y in range(self.height):
+            position = Position(0, y)
+            if position in self.loop_map:
+                ignored.add(position)
+            else:
+                left_to_search.add(position)
+
+            position = Position(self.width - 1, y)
+            if position in self.loop_map:
+                ignored.add(position)
+            else:
+                left_to_search.add(position)
+        for x in range(self.width):
+            position = Position(x, 0)
+            if position in self.loop_map:
+                ignored.add(position)
+            else:
+                left_to_search.add(position)
+
+            position = Position(x, self.height - 1)
+            if position in self.loop_map:
+                ignored.add(position)
+            else:
+                left_to_search.add(position)
 
         it = 0
         while left_to_search:
             it += 1
             current = left_to_search.pop()
-            if it % 10000 == 1:
-                print(f'Checking {current} {it}/{self.width * self.height}')
+            # if it % 10000 == 1:
+            print(f'Checking {current} {it}/{self.width * self.height}')
 
             found_outside.add(current)
             for d in Direction:
                 neighbour = current.neighbour(d)
                 next_pipe = self.loop_map.get(neighbour)
-                if neighbour in found_outside:
+                if neighbour.x < 0 or neighbour.x >= self.width or neighbour.y < 0 or neighbour.y >= self.height:
+                    continue
+                elif neighbour in found_outside or neighbour in ignored:
                     continue  # we've handled it before
                 elif next_pipe is not None:
-                    # we have to check the neighbour opposite the pipe to know if we could
-                    # "squeeze past" it
-
-
-                    pass
+                    if d.is_vertical and (next_pipe.first == Direction.East and next_pipe.second == Direction.West):
+                        ignored.add(neighbour)
+                        continue  # we're looking up or down and the neighbour is a straight line
+                    elif d.is_horizontal and (next_pipe.first == Direction.East and next_pipe.second == Direction.West):
+                        ignored.add(neighbour)
+                        continue  # we're looking left or right and the neighbour is a straight line
+                    else:
+                        # we have to check the neighbour opposite the pipe to know if we could
+                        # "squeeze past" it
+                        next_position = self._squeeze(current, d, next_pipe)
+                        if (
+                            next_position is not None
+                            and next_position not in found_outside
+                            and next_position not in ignored
+                        ):
+                            left_to_search.add(next_position)
                 else:
                     # not a know location: check it next
                     left_to_search.add(neighbour)
@@ -276,13 +356,31 @@ class PipeMap:
                 inside.add(current)
         return inside
 
+    def to_file(self, filename: str, found_inside: Set[Position]):
+        print(f'Saving to {filename}')
+        with open(filename, 'w') as fout:
+            for y in range(self.height):
+                line = []
+                for x in range(self.width):
+                    position = Position(x, y)
+                    if position in self.loop_map:
+                        c = self.loop_map[position].to_str(fancy=True)
+                    elif position in found_inside:
+                        c = 'I'
+                    else:
+                        c = '.'
+                    line.append(c)
+                fout.write(''.join(line) + '\n')
+
 
 def q1(pipe_map: PipeMap) -> int:
     return max((p.distance for p in pipe_map.loop_map.values()))
 
 
 def q2(pipe_map: PipeMap) -> int:
-    return len(pipe_map.find_area())
+    found = pipe_map.find_area()
+    pipe_map.to_file('output.txt', found)
+    return len(found)
 
 
 def main(filename: str):

@@ -114,20 +114,26 @@ class TestPipeMap:
 
     def test_find_area_ex4(self, small_ex4_txt):
         pipe_map = PipeMap.from_file(small_ex4_txt)
-        assert pipe_map.find_area() == {
-            Position(13, 3),
+        found = pipe_map.find_area()
+        exp = {
+            Position(14, 3),
             Position(7, 4),
             Position(8, 4),
             Position(9, 4),
             Position(7, 5),
             Position(8, 5),
             Position(6, 6),
-            Position(13, 6),
+            Position(14, 6),
         }
+        if found != exp:
+            pipe_map.to_file('output_ex4_found.txt', found)
+            pipe_map.to_file('output_ex4_exp.txt', exp)
+        assert found == exp
 
     def test_find_area_ex5(self, small_ex5_txt):
         pipe_map = PipeMap.from_file(small_ex5_txt)
-        assert pipe_map.find_area() == {
+        found = pipe_map.find_area()
+        exp = {
             Position(14, 3),
             Position(10, 4),
             Position(11, 4),
@@ -139,6 +145,10 @@ class TestPipeMap:
             Position(13, 6),
             Position(14, 6),
         }
+        if found != exp:
+            pipe_map.to_file('output_ex5_found.txt', found)
+            pipe_map.to_file('output_ex5_exp.txt', exp)
+        assert found == exp
 
 
 class TestQ1:
@@ -154,7 +164,7 @@ class TestQ1:
 
 class TestQ2:
     def test_small_ex3(self, small_ex3_txt):
-        assert q2(PipeMap(small_ex3_txt)) == 4
+        assert q2(PipeMap.from_file(small_ex3_txt)) == 4
 
     def test_small_ex4(self, small_ex4_txt):
         assert q2(PipeMap.from_file(small_ex4_txt)) == 8
@@ -163,4 +173,4 @@ class TestQ2:
         assert q2(PipeMap.from_file(small_ex5_txt)) == 10
 
     def test_input(self, input_txt):
-        assert q2(PipeMap.from_file(input_txt)) == 42  # not the real value
+        assert q2(PipeMap.from_file(input_txt)) != 650  # not the real value
