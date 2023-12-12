@@ -11,7 +11,6 @@ from day_05.compute import (
     Range,
     Subject,
     q1,
-    q2_brute,
     q2_range,
 )
 
@@ -86,7 +85,7 @@ class TestAlmanacEntry:
                 key=attrgetter('source_start'),
             ),
         )
-        assert almanac_entry._dumb_convert(seed) == almanac_entry.convert_int(seed) == soil
+        assert almanac_entry.convert_int(seed) == soil
 
     @pytest.mark.parametrize('seed, soil', seed_to_soil)
     def test_revert(self, seed, soil):
@@ -98,7 +97,7 @@ class TestAlmanacEntry:
                 Mapping(52, 50, 48),
             ],
         )
-        assert almanac_entry.reverse(soil) == seed
+        assert almanac_entry.reverse_int(soil) == seed
 
     def test_original_seed_to_soil(self, small_ex_txt):
         almanac = Almanac.from_file(small_ex_txt)
@@ -257,7 +256,9 @@ class TestAlmanac:
 
     def test_convert(self, small_ex_txt):
         almanac = Almanac.from_file(small_ex_txt)
-        locations = [almanac.convert_int(seed, Subject.Seed) for seed in almanac.original_seeds]
+        locations = [
+            almanac.convert_smallest_range(Range(seed, 1), Subject.Seed).start for seed in almanac.original_seeds
+        ]
         assert locations == [
             82,
             43,
@@ -271,10 +272,6 @@ class TestAlmanac:
             Range(79, 93 - 79),
             Range(55, 68 - 55),
         ]
-
-    def test_unpack_seeds(self, small_ex_txt):
-        almanac = Almanac.from_file(small_ex_txt)
-        assert list(almanac.unpack_seeds()) == list(range(79, 93)) + list(range(55, 68))
 
     @pytest.mark.parametrize('input_simplify, simplify_with', ((Subject.Seed, Subject.Soil),))
     def test_simplify(self, small_ex_txt, input_simplify, simplify_with):
@@ -293,8 +290,8 @@ class TestAlmanac:
         assert simpler.source == seed_entry.source == input_simplify
         assert simpler.destination == other_entry.destination == output_simplify
 
-        st = min((st, min((seed_entry.reverse(m.source_start) for m in other_entry.mappings))))
-        ed = max((ed, max((seed_entry.reverse(m.source_end) for m in other_entry.mappings))))
+        st = min((st, min((seed_entry.reverse_int(m.source_start) for m in other_entry.mappings))))
+        ed = max((ed, max((seed_entry.reverse_int(m.source_end) for m in other_entry.mappings))))
 
         assert simpler.destination == other_entry.destination == output_simplify
         if simplify_with == Subject.Soil:
@@ -318,9 +315,6 @@ class TestQ1:
 
 @pytest.mark.parametrize('simplify', (True, False))
 class TestQ2:
-    def test_small_ex_brute(self, small_ex_txt, simplify):
-        assert q2_brute(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
-
     def test_small_ex_range(self, small_ex_txt, simplify):
         assert q2_range(Almanac.from_file(small_ex_txt, simplify=simplify)) == 46
 

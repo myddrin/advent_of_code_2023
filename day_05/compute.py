@@ -2,8 +2,6 @@ import dataclasses
 import re
 import time
 from argparse import ArgumentParser
-from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta
 from enum import Enum
 from operator import attrgetter
 from typing import (
@@ -43,16 +41,6 @@ class Range:
     def contains(self, value: int) -> bool:
         return self.start <= value <= self.end
 
-    def merge(self, other: Self) -> List[Self]:
-        if self.end == other.start:
-            return [Range(self.start, self.length + other.length)]
-        elif self.start == other.end:
-            return [Range(other.start, other.length + self.length)]
-        return [self, other]
-
-    def generate(self) -> Iterable[int]:
-        return range(self.start, self.start + self.length)
-
 
 @dataclasses.dataclass(frozen=True)
 class Mapping:
@@ -79,7 +67,7 @@ class Mapping:
     def in_backward(self, item: int) -> bool:
         return self.destination_start <= item <= self.destination_end
 
-    def reverse(self, value: int) -> Optional[int]:
+    def reverse_int(self, value: int) -> Optional[int]:
         if self.in_backward(value):
             step = value - self.destination_start
             return self.source_start + step
@@ -169,8 +157,6 @@ class AlmanacEntry:
                     yield cls(
                         source=current_source,
                         destination=current_destination,
-                        # sort it by source_start in case we want to do a binary
-                        # search later, and to help testing
                         mappings=current_mappings,
                     )
                 current_mappings = []  # make a new one!
@@ -183,8 +169,6 @@ class AlmanacEntry:
             yield cls(
                 source=current_source,
                 destination=current_destination,
-                # sort it by source_start in case we want to do a binary
-                # search later, and to help testing
                 mappings=current_mappings,
             )
 
@@ -195,6 +179,7 @@ class AlmanacEntry:
         return None
 
     def simplify(self, other: Self) -> Self:
+        """Make a new AlmanacEntry that will combine this AlmanacEntry and the other one"""
         if self.destination != other.source:
             raise ValueError('Cannot simplify')
 
@@ -207,10 +192,10 @@ class AlmanacEntry:
             all_sources.add(mapping.source_end + 1)
 
         for mapping in other.mappings:
-            all_sources.add(self.reverse(mapping.source_start - 1))
-            all_sources.add(self.reverse(mapping.source_start))
-            all_sources.add(self.reverse(mapping.source_end))
-            all_sources.add(self.reverse(mapping.source_end + 1))
+            all_sources.add(self.reverse_int(mapping.source_start - 1))
+            all_sources.add(self.reverse_int(mapping.source_start))
+            all_sources.add(self.reverse_int(mapping.source_end))
+            all_sources.add(self.reverse_int(mapping.source_end + 1))
 
         sorted_sources = sorted(all_sources)
         for i in range(len(sorted_sources) - 1):
@@ -265,41 +250,17 @@ class AlmanacEntry:
             mappings=final_mappings,
         )
 
-    def reverse(self, value: int) -> int:
+    def reverse_int(self, value: int) -> int:
         # brute slow conversion - not used for critical path
         for mapping in self.mappings:
-            new_value = mapping.reverse(value)
-            if new_value is not None:
-                return new_value
-        # if not in mapping, return the value as is
-        return value
-
-    def _dumb_convert(self, value: int) -> int:
-        # boring slow conversion - when it's too small to use binary search
-        for mapping in self.mappings:
-            new_value = mapping.convert_int(value)
+            new_value = mapping.reverse_int(value)
             if new_value is not None:
                 return new_value
         # if not in mapping, return the value as is
         return value
 
     def convert_int(self, value: int) -> int:
-        # binary search
-        low = 0
-        high = len(self.mappings) - 1
-
-        while low <= high:
-            mid = (high + low) // 2
-            current = self.mappings[mid]
-
-            if (conv_value := current.convert_int(value)) is not None:
-                return conv_value
-            elif current.source_start < value:
-                low = mid + 1
-            else:
-                high = mid - 1
-
-        return value  # not found so not transformed
+        return self.convert_ranges([Range(value, 1)])[0].start
 
     def convert_ranges(self, data: List[Range]) -> List[Range]:
         converted = []
@@ -354,36 +315,6 @@ class Almanac:
             n = left_seeds.pop(0)
             yield Range(start, n)
 
-    def unpack_seeds(self) -> Iterable[int]:
-        if len(self.original_seeds) % 2 != 0:
-            raise ValueError('Need an even number of seeds')
-        left_seeds = list(self.original_seeds)
-        while left_seeds:
-            start = left_seeds.pop(0)
-            n = left_seeds.pop(0)
-            yield from range(start, start + n)
-
-    def convert_int(self, value: int, source: Subject, destination: Subject = Subject.Location) -> int:
-        if destination == source:
-            return value
-        if destination.value < source.value:
-            raise ValueError(f'Cannot convert backward from {source} to {destination}')
-
-        current_value = value
-        current_source = source
-
-        while current_source in self.entries:
-            entry = self.entries[current_source]
-            current_value = entry.convert_int(current_value)
-            current_source = entry.destination
-
-            if current_source == destination:
-                break  # we found it
-
-        if current_source != destination:
-            raise RuntimeError(f'Failed to convert {source} to {destination}')
-        return current_value
-
     def convert_smallest_range(self, data: Range, source: Subject, destination: Subject = Subject.Location) -> Range:
         if destination == source:
             return data
@@ -418,28 +349,12 @@ class Almanac:
 
 
 def q1(almanac: Almanac) -> int:
-    return min((almanac.convert_int(seed, Subject.Seed, Subject.Location) for seed in almanac.original_seeds))
-
-
-def q2_brute(almanac: Almanac, print_at: int = 1000000) -> int:
-    current_min = None
-    unpacked_seeds_size = sum((almanac.original_seeds[2 * i + 1] for i in range(len(almanac.original_seeds) // 2)))
-    print(f'Unpacked {len(almanac.original_seeds)} to {unpacked_seeds_size} seeds')
-    start_time = last_time = time.time()
-    for i, seed in enumerate(almanac.unpack_seeds(), start=1):
-        location = almanac.convert_int(seed, Subject.Seed, Subject.Location)
-        if current_min is None or location < current_min:
-            current_min = location
-        if i % print_at == 0:
-            new_time = time.time()
-            current_duration = new_time - last_time
-            estimate = timedelta(seconds=(unpacked_seeds_size - i) * (current_duration / print_at))
-            print(
-                f'  after {i}/{unpacked_seeds_size} current_min={current_min} in {current_duration:0.2f}s -> estimate {estimate} left',
-            )
-            last_time = new_time
-    print(f'Computed in {time.time() - start_time:0.2f} seconds')
-    return current_min
+    return min(
+        (
+            almanac.convert_smallest_range(Range(seed, 1), Subject.Seed, Subject.Location).start
+            for seed in almanac.original_seeds
+        ),
+    )
 
 
 def q2_range(almanac: Almanac) -> int:

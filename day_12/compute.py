@@ -46,7 +46,10 @@ class SpringRow:
         return sum((1 for spring in self.map_data if spring is False))
 
     def _recursive_brute_choice(
-        self, current: List[Optional[bool]], left_working: int, left_broken: int,
+        self,
+        current: List[Optional[bool]],
+        left_working: int,
+        left_broken: int,
     ) -> List[List[bool]]:
         if left_working == 0 and left_broken == 0:
             return [current]
