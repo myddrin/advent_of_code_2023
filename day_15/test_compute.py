@@ -5,6 +5,7 @@ import pytest
 from day_15.compute import (
     InitSeq,
     hash_step,
+    q2,
 )
 
 
@@ -46,3 +47,11 @@ class TestQ1:
 
     def test_input(self, input_txt):
         assert InitSeq.from_file(input_txt).checksum() == 510801
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert q2(InitSeq.from_file(small_ex_txt)) == 145
+
+    def test_input(self, input_txt):
+        assert q2(InitSeq.from_file(input_txt)) == 212763
