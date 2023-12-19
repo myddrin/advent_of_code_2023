@@ -2,12 +2,16 @@ import abc
 import dataclasses
 import json
 from argparse import ArgumentParser
+from collections import defaultdict
+from copy import deepcopy
 from typing import (
     ClassVar,
     Dict,
     List,
     Optional,
     Self,
+    Set,
+    Tuple,
 )
 
 
@@ -28,6 +32,64 @@ class Part:
         line = line.replace('{', '{"').replace(',', ',"').replace('=', '":')
         data = json.loads(line)
         return cls(**data)
+
+
+@dataclasses.dataclass
+class PartRange:
+    @dataclasses.dataclass
+    class _R:
+        min: int = 1
+        max: int = 4000
+
+        @property
+        def possibilities(self) -> int:
+            return self.max - self.min + 1
+
+        def as_tuple(self) -> Tuple[int, int]:
+            return self.min, self.max
+
+    # ranges are inclusive
+    x: _R = dataclasses.field(default_factory=_R)
+    m: _R = dataclasses.field(default_factory=_R)
+    a: _R = dataclasses.field(default_factory=_R)
+    s: _R = dataclasses.field(default_factory=_R)
+
+    def __hash__(self):
+        return hash(self.x.as_tuple() + self.m.as_tuple() + self.a.as_tuple() + self.s.as_tuple())
+
+    @property
+    def possibilities(self):
+        return self.x.possibilities * self.m.possibilities * self.a.possibilities * self.s.possibilities
+
+    def apply(self, rule: 'Check') -> Tuple[Self, Self]:
+        self_copy = deepcopy(self)
+        range_attr: PartRange._R = getattr(self_copy, rule.attr)
+        reverse = deepcopy(self)
+        reverse_range: PartRange._R = getattr(reverse, rule.attr)
+        if rule.cmp == Check.GT:
+            # update minimum
+            range_attr.min = max(
+                range_attr.min,
+                rule.value + 1,
+            )
+            # reverse: update maximum
+            reverse_range.max = min(
+                reverse_range.max,
+                rule.value,
+            )
+        elif rule.cmp == Check.LT:
+            # update maximum
+            range_attr.max = min(
+                range_attr.max,
+                rule.value - 1,
+            )
+            # reverse: update minimum
+            reverse_range.min = max(
+                reverse_range.min,
+                rule.value,
+            )
+
+        return self_copy, reverse
 
 
 @dataclasses.dataclass(frozen=True)
@@ -108,6 +170,35 @@ class Workflow:
 
         return current == Rule.ACCEPTED
 
+    def _visitor(self, part_range: PartRange, next_workflow: str) -> Set[PartRange]:
+        if next_workflow == Rule.ACCEPTED:
+            return {part_range}
+        elif next_workflow == Rule.REJECTED:
+            return set()
+
+        rules = self.workflows[next_workflow]
+        next_rules: Dict[str, Set[PartRange]] = defaultdict(set)
+        current_range = part_range
+        for r in rules[:-1]:
+            if isinstance(r, Check):
+                new_ranges = current_range.apply(r)
+                next_rules[r.target].add(new_ranges[0])
+                current_range = new_ranges[1]
+            else:
+                raise ValueError(f'Unexpected {r}')
+        # apply else rule
+        next_rules[rules[-1].target].add(current_range)
+
+        results = set()
+        for workflow, part_ranges in next_rules.items():
+            for part_range in part_ranges:
+                results.update(self._visitor(part_range, workflow))
+        return results
+
+    def visit_for_accepted(self) -> int:
+        results = self._visitor(PartRange(), 'in')
+        return sum(res.possibilities for res in results)
+
     def load_rule_line(self, line: str):
         name_idx = line.find('{')
         name = line[:name_idx]
@@ -148,6 +239,7 @@ def main(filename: str):
     workflow = Workflow.from_file(filename)
 
     print(f'Q1: accepted score is {q1(workflow)}')
+    print(f'Q2: {workflow.visit_for_accepted()} possibilities')
 
 
 if __name__ == '__main__':

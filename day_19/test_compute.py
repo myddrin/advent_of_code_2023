@@ -38,3 +38,11 @@ class TestQ1:
 
     def test_input(self, input_txt):
         assert q1(Workflow.from_file(input_txt)) == 487623
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert Workflow.from_file(small_ex_txt).visit_for_accepted() == 167409079868000
+
+    def test_input(self, input_txt):
+        assert Workflow.from_file(input_txt).visit_for_accepted() == 113550238315130
