@@ -27,3 +27,11 @@ class TestQ1:
 
     def test_input(self, input_txt):
         assert Map.from_file(input_txt).trigger_beam() == 8249
+
+
+class TestQ2:
+    def test_small_ex(self, small_ex_txt):
+        assert Map.from_file(small_ex_txt).best_beam() == 51
+
+    def test_input(self, input_txt):
+        assert Map.from_file(input_txt).best_beam() == 8444
