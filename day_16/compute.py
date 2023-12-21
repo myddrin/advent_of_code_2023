@@ -190,7 +190,9 @@ class Map:
         print(f'Found best beam in {time.time() - start_time:.2f}s')
         return best_beam
 
-    def energy_to_file(self, filename: str, energy_map: Set[Position], *, current: Position = None, show_mirrors: bool = False):
+    def energy_to_file(
+        self, filename: str, energy_map: Set[Position], *, current: Position = None, show_mirrors: bool = False,
+    ):
         print(f'Saving {filename}')
         energised_mirror = {
             '/': '(',
