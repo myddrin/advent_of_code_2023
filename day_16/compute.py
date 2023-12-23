@@ -191,7 +191,12 @@ class Map:
         return best_beam
 
     def energy_to_file(
-        self, filename: str, energy_map: Set[Position], *, current: Position = None, show_mirrors: bool = False,
+        self,
+        filename: str,
+        energy_map: Set[Position],
+        *,
+        current: Position = None,
+        show_mirrors: bool = False,
     ):
         print(f'Saving {filename}')
         energised_mirror = {
