@@ -29,12 +29,12 @@ class TestEdge:
     @pytest.mark.parametrize(
         'path, exp',
         (
-            (['aaa', 'aab', 'aac'], {Edge('aaa', 'aab'), Edge('aab', 'aac')}),
-            (['aab', 'aaa'], {Edge('aaa', 'aab')}),
+            (['aaa', 'aab', 'aac'], [Edge('aaa', 'aab'), Edge('aab', 'aac')]),
+            (['aab', 'aaa'], [Edge('aaa', 'aab')]),
         ),
     )
     def test_build_from_path(self, path, exp):
-        assert Edge.build_from_path(path) == exp
+        assert list(Edge.build_from_path(path)) == exp
 
 
 class TestGraph:
@@ -45,8 +45,8 @@ class TestGraph:
         jqt = graph.nodes['jqt']
         for conn in jqt.connections:
             e = Edge.build('jqt', conn)
-            assert graph.shortest_path[e] == {e}
-        # further neighbours checks
+            assert graph.shortest_path[e] == ['jqt', conn] or graph.shortest_path[e] == [conn, 'jqt']
+        # further neighbours checks?
 
 
 class TestQ1:
