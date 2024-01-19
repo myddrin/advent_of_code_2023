@@ -2,6 +2,7 @@ import dataclasses
 from argparse import ArgumentParser
 from operator import itemgetter
 from typing import (
+    ClassVar,
     Iterable,
     List,
     Self,
@@ -10,6 +11,8 @@ from typing import (
 
 @dataclasses.dataclass(frozen=True)
 class Line:
+    q2_words: ClassVar[List[str]] = ('one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine')
+
     data: str
     digits: List[int]
     extended_digits: List[int]
@@ -24,29 +27,36 @@ class Line:
 
     @classmethod
     def extract_digits(cls, line: str) -> Iterable[int]:
-        ord_0 = ord('0')
-        ord_9 = ord('9')
+        # ord_0 = ord('0'); ord_9 = ord('9'); if ord_0 <= ord(c) <= ord_9: yield int(c)
         for c in line:
-            if ord_0 <= ord(c) <= ord_9:
+            if c.isnumeric():
                 yield int(c)
 
     @classmethod
-    def from_line(cls, line: str) -> Self:
-        found_at = []
-        for digit_value, alt_digit in enumerate(
-            ('one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'),
-            start=1,
-        ):
-            # handling linking of values, like eightwo should give 8 and 2
-            pos = 0
-            while pos >= 0:
-                pos = line.find(alt_digit, pos)
-                if pos >= 0:
-                    found_at.append((pos, str(digit_value)))
-                    pos += 1  # start at next character - avoid finding the same one in a loop!
-        new_data = line
-        for pos, to_insert in sorted(found_at, key=itemgetter(0), reverse=True):
-            new_data = new_data[:pos] + to_insert + new_data[pos:]
+    def from_line(cls, line: str, substitute: bool = False) -> Self:
+        if substitute:
+            new_data = line
+            for digit_value, alt_digit in enumerate(
+                cls.q2_words,
+                start=1,
+            ):
+                new_data = new_data.replace(alt_digit, f'{alt_digit}{digit_value}{alt_digit}')
+        else:
+            found_at = []
+            for digit_value, alt_digit in enumerate(
+                cls.q2_words,
+                start=1,
+            ):
+                # handling linking of values, like eightwo should give 8 and 2
+                pos = 0
+                while pos >= 0:
+                    pos = line.find(alt_digit, pos)
+                    if pos >= 0:
+                        found_at.append((pos, str(digit_value)))
+                        pos += 1  # start at next character - avoid finding the same one in a loop!
+            new_data = line
+            for pos, to_insert in sorted(found_at, key=itemgetter(0), reverse=True):
+                new_data = new_data[:pos] + to_insert + new_data[pos:]
 
         digits = list(cls.extract_digits(line))
         extended_digits = list(cls.extract_digits(new_data))
@@ -54,12 +64,12 @@ class Line:
         return cls(line, digits, extended_digits)
 
 
-def load_data(filename: str) -> List[Line]:
+def load_data(filename: str, substitute: bool = False) -> List[Line]:
     print(f'Loading {filename}')
     data = []
     with open(filename, 'r') as fin:
         for line in fin:
-            data.append(Line.from_line(line))
+            data.append(Line.from_line(line, substitute))
     print(f'Loaded {len(data)} lines')
     return data
 
