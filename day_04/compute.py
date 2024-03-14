@@ -16,7 +16,7 @@ class Card:
 
     id: int
     winning_numbers: Set[int]
-    numbers: List[int]
+    numbers: List[int]  # TODO(tr) could be a set
 
     @property
     def number_matches(self) -> int:

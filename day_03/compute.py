@@ -62,30 +62,24 @@ class Schematic:
         return cls(data, symbols)
 
     def is_digit(self, p: Position) -> bool:
-        try:
-            int(self.data[p.y][p.x])
-        except (ValueError, IndexError):
-            return False
-        else:
-            return True
+        return self.data[p.y][p.x].isdigit()
 
     def extract_number_at(self, p: Position) -> int:
         source_str = self.data[p.y]
-        not_digit_re = re.compile(r'[^\d]')
 
         start = p.x
         end = p.x
         while start >= 0:
-            if not_digit_re.match(source_str[start]):
+            if not source_str[start].isdigit():
                 break
             start -= 1
         while end < len(source_str):
-            if not_digit_re.match(source_str[end]):
+            if not source_str[end].isdigit():
                 break
             end += 1
 
-        slice = source_str[start + 1 : end]
-        return int(slice)
+        slice_str = source_str[start + 1 : end]
+        return int(slice_str)
 
     def find_numbers_adjacent_to_symbols(self) -> List[int]:
         # I'll assume the same number cannot be counted twice
